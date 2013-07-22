@@ -24,11 +24,12 @@ calc :: String -> Float
 calc x = do
     let e = prase x
     let i = calc e
+    putStrLn(show i)
 
 parse :: String -> Expr
 parse s = parse' tok
     where
-        tok = tokenize str
+        tok = tokenize s
 
 parse' :: [String] -> Expr
 parse' [x] = Const (read x)
