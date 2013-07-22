@@ -18,7 +18,7 @@
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
 
-\lstset{language=C,
+\lstset{language=Haskell,
 numbers=left,
 numberstyle=\tiny\color{gray},
 stepnumber=1,
@@ -50,8 +50,147 @@ literate=%
 \maketitle
 \tableofcontents
 \chapter{VL I}
-\section{Orga}
+\section{Motivation}
+Warum eigentlich Haskell?\\
+Haskell Compiler ist mächtig. Weil die Semantik und Typsystem wilde Sachen erlaubt. Wilde Sachen ermöglichen korrekte Software und sind meist sogar effizienter.\\
+
+\section{Was passiert hier?! - der kleine Webserver}
+
+\subsection{der kleine Webserver}
+%code einbinden
+
+Was nicht behandelt wurde:
+\begin{compactitem}
+\item Fehlerfälle, Exceptions
+Haskell unterstütz Exceptions 
+\item Effizienz
+\end{compactitem}
 
 
+\subsection{Einbinden von Modulen}
+import am Anfang der Datei
+\begin{compactitem}
+\item System.IO
+\item Control.Monad (forever)
+\item Text.Printf
+\item Network
+\item Control.Exception
+\item Control.Concurrent
+\end{compactitem}
 
+\subsection{Do-Notation}
+\begin{lstlisting}
+main = do
+	putStrLn "hallo user!!"
+	putStrLn "xxxx"
+	main = p "x" >> p "x"
+\end{lstlisting}
+
+ist das gleiche wie
+\begin{lstlisting}
+main :: IO()
+main = do
+	args <- getArgs
+	read ((!!0) args)
+	let x = read ((!! 1) args)
+\end{lstlisting}
+
+\subsubsection{Typen}
+
+listenOn: $\_ \leftarrow \ IO\_$
+
+\subsection{\$-Operator}
+\begin{lstlisting}
+f a b
+\end{lstlisting}
+a ist eine Fkt. g x k\\
+b ist eine Fkt. k fv
+
+\begin{lstlisting}
+f $ g x k $ k f v
+\end{lstlisting}
+
+\subsection{!!-Operator}
+Gibt das angegebene Element aus der Liste zurück.
+\begin{lstlisting}
+(!!) :: [a] -> Int -> a
+let xs = []
+ys = [1,2,4]
+zs = [1..1378]
+
+zs !! 0
+\end{lstlisting}
+\section{der größere Webserver}
+%code einbinden
+
+\section{builds}
+\subsection{mit ghc}
+\begin{lstlisting}
+ghc x.hs
+\end{lstlisting}
+Wird unübersichtlich für mehrere Dateien / Module.
+
+\subsection{mit cabal}
+\begin{lstlisting}
+cabal configure
+cabal build
+cabal install
+\end{listlisting}
+
+Projekte werden als \textbf{.cabal} gespeichert, sind eleganter und man kann schneller testen.
+
+\section{.(Punkt)-Operator}
+\begin{lstlisting}
+(.):: (b -> c) -> (a -> b) -> (a -> c)
+f . g
+\end{lstlisting}
+
+entspricht\\
+
+\begin{lstlisting}
+(\x -> f ( g x))
+\end{lstlisting}
+
+\section{Generics in Haskell}
+
+\begin{lstlisting}
+List e
+m k v
+\end{lstlisting}
+
+\section{Stdlib - System.IO}
+\begin{compactitem}
+\item Textinput / Textoutput
+\begin{compactitem}
+\item Print
+\item getLine
+\item getChar
+\end{compactitem}
+\end{compactitem}
+
+\section{Stdlib - System.Environment}
+\begin{compactitem}
+\item getArgs
+\end{compactitem}
+
+\section{Kommentare und Haddoc}
+\begin{lstlisting}
+-- einfacher Kommentar
+{- mehrzeiliger Kommentar -}
+{- mehrzeiliger Kommentar 
+	{- verschachtelter Kommentar -} 
+-}
+-- | haddoc kommentar
+\end{lstlisting}
+
+\section{Keywords}
+Programming Guidelines sind brauchbar
+\begin{lstlisting}
+main = do 
+	args <- getArgs
+	case args of
+		[] -> ...
+		["-x"] -> ...
+		["-x",b] -> ...
+\end{lstlisting}
 \end{document}
