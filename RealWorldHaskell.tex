@@ -1,29 +1,30 @@
-\documentclass[ngerman]{report}
-\usepackage[ngerman]{babel}
-%\usepackage{times}
-%\usepackage{MyriadPro}
-%\usepackage{MinionPro}
+\documentclass[ngerman,a4paper]{report}
+\usepackage[english,ngerman]{babel}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{multirow}
-\usepackage{amsmath}
-%\usepackage{geometry}
+\usepackage{geometry}
+\usepackage{caption}
+\usepackage{hyperref}
+%\usepackage{MyriadPro}
 \usepackage{graphicx}
-\usepackage{paralist}
-%\geometry{a4paper}
+%\geometry{verbose,tmargin=3cm,bmargin=3cm,lmargin=3cm,rmargin=3cm}
 \usepackage{listings}
-
+\usepackage{paralist}
+\usepackage{stmaryrd}
 \usepackage{color}
+%\usepackage{floatflt}
+\usepackage{amsmath}
+%\usepackage{amssymb}
+\usepackage{float}
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
-
 \lstset{language=Haskell,
 numbers=left,
 numberstyle=\tiny\color{gray},
 stepnumber=1,
 numbersep=5pt,
-basicstyle=\small,
+%basicstyle=\tiny,
 %frame = single,
 tabsize =2,
 breaklines = true,
@@ -31,7 +32,6 @@ breakatwhitespace = false,
 keywordstyle=\color{blue},          % keyword style
 commentstyle=\color{dkgreen},       % comment style
 stringstyle=\color{mauve},         % string literal style
-mathescape=true,
 literate=%
 {Ö}{{\"O}}1
 {Ä}{{\"A}}1
@@ -41,7 +41,10 @@ literate=%
 {ä}{{\"a}}1
 {ö}{{\"o}}1
 }
- 
+
+%\selectlanguage{english}
+
+\renewcommand{\familydefault}{\sfdefault}
 \author{Tobias Höppner}
 \title{Real World Haskell}
 \date{SoSe 2013}
@@ -57,7 +60,8 @@ Haskell Compiler ist mächtig. Weil die Semantik und Typsystem wilde Sachen erla
 \section{Was passiert hier?! - der kleine Webserver}
 
 \subsection{der kleine Webserver}
-%code einbinden
+
+\lstinputlisting{code/VL/webserver.hs}
 
 Was nicht behandelt wurde:
 \begin{compactitem}
@@ -135,7 +139,7 @@ Wird unübersichtlich für mehrere Dateien / Module.
 cabal configure
 cabal build
 cabal install
-\end{listlisting}
+\end{lstlisting}
 
 Projekte werden als \textbf{.cabal} gespeichert, sind eleganter und man kann schneller testen.
 
@@ -173,7 +177,7 @@ m k v
 \item getArgs
 \end{compactitem}
 
-\section{Kommentare und Haddoc}
+\section{Kommentare und Haddock}
 \begin{lstlisting}
 -- einfacher Kommentar
 {- mehrzeiliger Kommentar -}
@@ -193,4 +197,7 @@ main = do
 		["-x"] -> ...
 		["-x",b] -> ...
 \end{lstlisting}
+
+\chapter{VL II}
+\section{Neuer Tag, neues Haskell}
 \end{document}

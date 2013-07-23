@@ -215,6 +215,7 @@ pip-log.txt
 .mr.developer.cfg
 
 #latex
+*.out
 *.log
 *.aux
 *.toc
