@@ -8,12 +8,11 @@
 -- Stability   :
 -- Portability :
 --
--- |
+-- | nicht ausführbar, nur Beispiele zum Transfer von bind in do-Notation
 --
 -----------------------------------------------------------------------------
 
 module Eval (
-evalM, evalM'
 ) where
 
 {-
@@ -45,10 +44,13 @@ evalM' = evalExpr fC fA fD
                     return ... {- kommt auf die Monade an -}
 
 headsafe :: [a] -> Maybe a
-headsafe [] >>= return . (+1)
+a = headsafe [] >>= return . (+1)
 
-headsafe' :: [a] -> Maybe a
-(headsafe' [])
+a = headsafe [] >>= (\a -> (return . (+1))a)
+
+a' = do
+    b <- headSafe[]
+    return $ b + 1
 
 f = do
     x
@@ -57,3 +59,26 @@ f = do
         g 'c'
 
 f' = x >> z >>= (\c -> let g z = z in g 'c')
+
+z = do
+    a
+    b
+z' = a >> b
+
+
+g = do
+    x1 <- a
+    x2 <- b
+    let x = 8
+    c
+    d
+
+g' = a >>= (\x1 -> b >>= (\x2 -> let x = 8 in c >> d))
+
+p = a >>= (\x1 -> b >>= (\x2 -> c >>= (\x3 -> f x2 x3)))
+
+p' = do
+    x1 <- a
+    x2 <- b
+    x3 <- c
+    f x2 x3
