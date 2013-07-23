@@ -1,20 +1,19 @@
-name: u1
+name: u2
 version: 0.0.1
 cabal-version: >=1.2
 build-type: Simple
 license: AllRightsReserved
 license-file: ""
-synopsis: package for exercise 1
 data-dir: ""
  
-executable u1
+executable u2
     build-depends: QuickCheck -any, base -any
     main-is: Main.hs
     buildable: True
     hs-source-dirs: src
-    other-modules: Calculator Tokenize Calc
+    other-modules: Either Eval
  
-test-suite test-u1
+test-suite test-u2
     build-depends: QuickCheck -any, base -any
     type: exitcode-stdio-1.0
     main-is: Main.hs

@@ -19,6 +19,7 @@ module Main (
 import System.Environment (getArgs)
 import Data.List (span)
 import Calc (calc)
+import Calculator (exec)
 
 -- | args ist eine Funktion die Argumente vom Programmaufruf ausliest und eine Funktion foo auf
 -- diese Argumente anwendet.
@@ -34,10 +35,20 @@ foo x = let (a,b) = span (/= '=') x  in
     else (a, Just $ tail b)
 
 -- | main liest Programmparameter ein.
-main = do
+{-main = do
     --argumente <- args
     --print argumente
     args <- getArgs
     case args of
         [] -> putStrLn "no args"
         (x:xs) -> calc x
+-}
+
+main = do
+    args <- getArgs
+    case args of
+        [] -> putStrLn "usage: ..."
+        (x:xs) -> do
+            res <- calc x
+            result <- exec x
+            print result
