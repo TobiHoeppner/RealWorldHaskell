@@ -20,17 +20,19 @@ import Tokenize
 
 data Expr = Const Float | Add Expr Expr | Mul Expr Expr | Div Expr Expr | Sub Expr Expr
 
+-- | exportierte Funktion. Kann sehr einfache Mathematische Ausdrücke aus einem String parsen
+-- und berechnen
 calc :: String -> Float
 calc x = do
-    let e = prase x
+    let e = parse x
     let i = calc e
     putStrLn(show i)
 
+-- | erzeugt aus einem String eine Expression
 parse :: String -> Expr
-parse s = parse' tok
-    where
-        tok = tokenize s
+parse s = parse' (tokenize s)
 
+-- | nicht sichtbare Fallunterscheidung
 parse' :: [String] -> Expr
 parse' [x] = Const (read x)
 parse' [l, o, r] = case o of
@@ -45,12 +47,12 @@ parse' xs
         (l1, r1) = break (\x -> x == "+" || "-") xs
         (l1, r1) = break (\x -> x == "*" || "/") xs
 
--- |
+-- | erzeugt aus einer Expression wieder eine Expression oder ein Float
 eval :: Expr -> Float
-eval = case e of
-    Add l r -> calc l  + clac r
-    Sub l r -> calc l  - clac r
-    Div l r -> calc l  / clac r
-    Mul l r -> calc l  * clac r
+eval e = case e of
+    Add l r -> calc l  + calc r
+    Sub l r -> calc l  - calc r
+    Div l r -> calc l  / calc r
+    Mul l r -> calc l  * calc r
     Const v -> v
 
