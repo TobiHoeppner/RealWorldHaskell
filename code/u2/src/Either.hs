@@ -18,7 +18,10 @@ module Either (
 
 data Entweder a = Links String | Rechts a deriving Show
 
-instance Monad (Entweder String) where
-    return = Rechts
-    (>>=) = Links
+-- (>>=):: (EntwederString a) -> (a -> EntwederString b) -> (EntwederString b)
 
+instance Monad EntwederString where
+    return = Rechts
+    m >>= f = case m of
+        Links s -> Links s
+        Recht a -> f a
