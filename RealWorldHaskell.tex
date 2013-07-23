@@ -199,5 +199,200 @@ main = do
 \end{lstlisting}
 
 \chapter{VL II}
-\section{Neuer Tag, neues Haskell}
+\section{Zustände in Haskell}
+Gestern wurde der Taschenrechner implementiert, heute sehen wir uns an wie man die eval-Funktion mit Zustandsveränderungen verbessern kann.
+\subsection{Eval Funktion in "besser"}
+\begin{lstlisting}
+data Expr = Const Float | Add Expr Expr | Div Expr Expr
+
+evalO :: Expr -> Float
+evalO (Const x) = x = id x
+evalO (Add e1 e2) = evalO(e1) + evalO(e2)
+evalO (Div e1 e2) = evalO(e1) / evalO(e2)
+evalO (Div (Const 1) (Const 0)) = Infinity
+
+evalExpr fC fA fD (Const x) = fC x
+evalExpr fC fA fD (Add e1 e2) = fA (evalExpr fC fA fD e1) (evalExpr fC fA fD e2)
+
+data Maybe a = Nothing | Just a
+
+eval1 = eval Expr id (+) fD
+	where fD x y = if y == 0
+	...
+
+eval2 :: Expr -> Maybe Float
+eval2 = evalExpr Just fA fD
+	where
+		fA e1 e2 = case e1 of
+			Nothing -> Nothing
+			Just x -> case e2 of
+				Nothing -> Nothing
+				Just y -> Just (x + y)
+		fD e1 e2
+			Nothing -> Nothing
+			Just x -> case e2 of
+				Nothing -> Nothing
+				Just y -> Just (x 7 y)
+
+-- Abstrahieren
+
+op :: Maybe a -> (a -> Maybe b) -> Maybe b
+op val f = case val of
+	Nothing -> Nothing
+	Just x -> f x
+
+eval3 = eval Expr Just fA fD
+	where 
+		fA e1 e2 = e1 'op' (\x -> e2 'op' (\y -> (x + y)))
+		fA e1 e2 = e1 'op' (\x -> e2 'op' (\y -> (x / y)))
+\end{lstlisting}
+
+\subsection{Zustandsveränderung}
+
+%Bild state_trans1.png
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=150px]{gfx/state_trans1.png}
+	\caption{Zustandsveränderungen}
+	\label{img:statetrans}
+\end{figure}
+
+\begin{lstlisting}
+type State = Float
+
+update :: Float -> State -> State
+update f = max abs(f)
+
+data St a = S(State -> (a,State))
+\end{lstlisting}
+
+"Folgezustand" berechnen
+
+\begin{lstlisting}
+apply :: St a -> State -> (a, State)
+appl (S f) s = f s'
+\end{lstlisting}
+
+Unterschied data / type Listings:\\
+\textbf{type} beschreibt wie man einen Zustand definiert.
+\textbf{data} beschreibt wie man einen Zustand verändert.
+
+\subsection{Verbesserte Eval-Funktion}
+\begin{lstlisting}
+eval4 :: Expr -> St Float
+eval4 = eval Expr fC fA fD
+	where
+		fC x = St (\s -> (x,s))
+		fA sx sy = St (\s -> let (x, s1) = apply sx s
+									(y, s2) = apply sy s1
+								in (x + y, update(x+y) s2))
+		fA sx sy = St (\s -> let (x, s1) = apply sx s
+									(y, s2) = apply sy s1
+								in (x / y, update(x/y) s2))
+\end{lstlisting}
+
+\subsection{Eval5, noch coolerer}
+\begin{lstlisting}
+ret x = S (\s -> (x,s))
+
+ap:: St a -> (a -> St b) -> St b
+ap st f = S (\s -> let (x, s1) = apply st s
+						in apply (f x) s1)
+
+eval5 = evalExpr fC fA fD
+	where
+		fC x = ret x
+		fA sx sy = sx 'ap' (\x ->
+					sy 'ap' (\y ->
+					s(\s -> (x+y, update abs (x+y) s))))
+		fD sx sy = sx 'ap' (\x ->
+					sy 'ap' (\y ->
+					s(\s -> (x/y, update abs (x/y) s))))
+\end{lstlisting}
+
+\subsection{Jetzt ohne Zustände}
+Zwei Hilfsfunktionen:\\
+
+\begin{lstlisting}
+get :: St State
+get = S (\s -> (s,s))
+
+put :: State -> St ()
+put s = S(\_ -> ((),s))
+\end{lstlisting}
+
+$\rightarrow$
+
+\begin{lstlisting}
+stAct :: (State -> State) -> St ()
+stAct f = get 'ap' (put.f)
+
+eval6 = evalExpr fC fA fD
+	where
+		fC = ret
+		fA sx sy = sx 'ap' (\x ->
+					sy 'ap'	 (\y -> 
+					stAct (update(x+y)) 'ap' (\() -> ret (x+y)))))
+\end{lstlisting}
+
+\subsection{evals im Vergleich}
+\begin{compactitem}
+	\item eval3 und eval6 machen das gleiche, jedoch auf unterschiedliche Wege
+\end{compactitem}
+
+\section{Monaden}
+\begin{lstlisting}
+class Monad m where
+	return :: a -> m a
+	(>>=)	:: m a -> (a -> m b) -> m b
+\end{lstlisting}
+
+ap ist eine Monade!\\
+In Haskell schreibt man das so:
+\begin{lstlisting}
+instance Monad Maybe where
+	return = Just
+	(>>=) = op
+\end{lstlisting}
+
+\subsection{die letzte Eval-Funktion (wirklich!)}
+So implementiert man ungefähr immer eine Monade\\
+\begin{lstlisting}
+evalM :: Monad m => Expr -> m Float
+evalM = eval Expr fC fA fD
+	where
+		fC = return
+		fA m1 m2 = m1 >>= (x -> 
+					m2 >>= (y ->
+						... -- irgendwas spezifisches
+						return (x+y))))
+		fD m1 m2 = m1 >>= (x -> 
+					m2 >>= (y ->
+						if y == 0 -- irgendwas spezifisches
+						then Nothing
+						else return (x/y))))
+\end{lstlisting}
+
+Für
+\begin{lstlisting}
+m >>= \x -> fx
+\end{lstlisting}
+schreibt man auch
+\begin{lstlisting}
+do x <- m
+	return (f x)
+\end{lstlisting}
+.\\
+
+\begin{lstlisting}
+m1 >> m2
+\end{lstlisting}
+ist nichts anderes als
+\begin{lstlisting}
+do	m1
+		m2
+\end{lstlisting}
+
+Für Monaden gibt es 3 Gesetze, die stehen aber in der Doku.
+
 \end{document}
