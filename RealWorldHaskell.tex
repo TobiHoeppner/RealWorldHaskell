@@ -646,7 +646,7 @@ Der Bildmittelpunkt ist entscheidend. $0,0$ ist der Mittelpunkt des Bildschirms.
 main = animate
 	(InWindow "Titel" (400, 300) (100, 100))
 	white
-	\t -> (Pictures)
+	(\t -> Pictures [ Line [(0, 100), (0, -100)] , Translate (10*t) 0 (Circle 80) ] )
 \end{lstlisting}
 
 \end{document}

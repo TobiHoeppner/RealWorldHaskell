@@ -5,15 +5,15 @@ build-type: Simple
 license: AllRightsReserved
 license-file: ""
 synopsis: network stuff
-description:  
 data-dir: ""
- 
+
 executable u3
-    build-depends: QuickCheck -any, base -any
+    build-depends: QuickCheck -any, base -any, network
     main-is: Main.hs
     buildable: True
     hs-source-dirs: src
- 
+    other-modules: Echo
+
 test-suite test-u3
     build-depends: QuickCheck -any, base -any
     type: exitcode-stdio-1.0

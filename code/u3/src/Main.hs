@@ -2,12 +2,12 @@
 -----------------------------------------------------------------------------
 --
 -- Module      :  Main
--- Copyright   :  
+-- Copyright   :
 -- License     :  AllRightsReserved
 --
--- Maintainer  :  
--- Stability   :  
--- Portability :  
+-- Maintainer  :
+-- Stability   :
+-- Portability :
 --
 -- |
 --
@@ -21,17 +21,7 @@ import Control.Monad (unless)
 import Data.List (stripPrefix)
 import System.Exit (exitFailure)
 import Test.QuickCheck.All (quickCheckAll)
-
--- Simple function to create a hello message.
-hello s = "Hello " ++ s
-
--- Tell QuickCheck that if you strip "Hello " from the start of
--- hello s you will be left with s (for any s).
-prop_hello s = stripPrefix "Hello " (hello s) == Just s
-
--- Hello World
-exeMain = do
-    putStrLn (hello "World")
+import Echo(echoServ)
 
 -- Entry point for unit tests.
 testMain = do
@@ -43,7 +33,7 @@ testMain = do
 -- MAIN_FUNCTION is preprocessor macro set to exeMain or testMain.
 -- That way we can use the same file for both an application and for tests.
 #ifndef MAIN_FUNCTION
-#define MAIN_FUNCTION exeMain
+#define MAIN_FUNCTION echoServ
 #endif
 main = MAIN_FUNCTION
 
