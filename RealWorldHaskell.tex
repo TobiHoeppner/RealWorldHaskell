@@ -5,7 +5,7 @@
 \usepackage{geometry}
 \usepackage{caption}
 \usepackage{hyperref}
-\usepackage{MyriadPro}
+%\usepackage{MyriadPro}
 \usepackage{graphicx}
 %\geometry{verbose,tmargin=3cm,bmargin=3cm,lmargin=3cm,rmargin=3cm}
 \usepackage{listings}
@@ -200,43 +200,26 @@ main = do
 
 \chapter{VL II}
 \section{Zustände in Haskell}
-Gestern wurde der Taschenrechner implementiert, heute sehen wir uns an wie man die eval-Funktion weiter entwickeln kann.
+Gestern wurde der Taschenrechner implementiert, heute sehen wir uns an wie man die eval-Funktion mit Zustandsveränderungen verbessern kann.
 \subsection{Eval Funktion in "besser"}
 \begin{lstlisting}
 data Expr = Const Float | Add Expr Expr | Div Expr Expr
 
-eval0 :: Expr -> Float
-eval0 (Const x) = x = id x
-eval0 (Add e1 e2) = evalO(e1) + evalO(e2)
-eval0 (Div e1 e2) = evalO(e1) / evalO(e2)
-eval0 (Div (Const 1) (Const 0)) = Infinity
-\end{lstlisting}
-Zunächst abstrahieren wir das pattern matching mithilfe einer neuen Funktion \textbf{evalExpr}. Die Hilfsfunktionen \textbf{fC}, \textbf{fA}, \textbf{fD} stehen jeweils für das ermitteln einer Konstanten, das Berechnen einer Addition oder das Berechnen einer Division.
-\begin{lstlisting}
-fC :: Float -> Float
-fA :: Float -> Float -> Float
-fD :: Float -> Float -> Float
+evalO :: Expr -> Float
+evalO (Const x) = x = id x
+evalO (Add e1 e2) = evalO(e1) + evalO(e2)
+evalO (Div e1 e2) = evalO(e1) / evalO(e2)
+evalO (Div (Const 1) (Const 0)) = Infinity
 
 evalExpr fC fA fD (Const x) = fC x
 evalExpr fC fA fD (Add e1 e2) = fA (evalExpr fC fA fD e1) (evalExpr fC fA fD e2)
-evalExpr fC fA fD (Div e1 e2) = fD (evalExpr fC fA fD e1) (evalExpr fC fA fD e2)
-\end{lstlisting}
-Eine Fehlerbehandlung kann wie folgt realisiert werden:
-\begin{lstlisting}
-eval1 = eval Expr id (+) fD
-	where fD x y = if y == 0 then error "div by 0!" else (x/y)
-\end{lstlisting}
-Hier wird das Programm mit \textbf{error} abgebrochen sobald der Wert $0$ für $y$angegeben wird. Besser wäre es eine Funktion zu formulieren die einen zusätzlichen Fehlerwert ausgeben kann (\textbf{Nothing}). Alle erfolgreichen Ergebnisse sind in ein \textbf{Just} verpackt.\\
-Zur Erinnerung \textbf{Maybe} ist wie folgt definiert:
-\begin{lstlisting}
+
 data Maybe a = Nothing | Just a
-\end{lstlisting}
-In unserem Fall hat \textbf{Just} folgende Signatur:
-\begin{lstlisting}
-Just :: Float -> Maybe Float
-\end{lstlisting}
-Damit kann man jetzt eine bessere \textbf{Eval-}Funktion schreiben:
-\begin{lstlisting}
+
+eval1 = eval Expr id (+) fD
+	where fD x y = if y == 0
+	...
+
 eval2 :: Expr -> Maybe Float
 eval2 = evalExpr Just fA fD
 	where
@@ -249,33 +232,22 @@ eval2 = evalExpr Just fA fD
 			Nothing -> Nothing
 			Just x -> case e2 of
 				Nothing -> Nothing
-				Just y -> Just (x / y)
-\end{lstlisting}
-\subsection{Abstrahieren}
-\textbf{fA} und \textbf{fD} folgen dem selben Muster:
-\begin{lstlisting}
-func x ... = case x of
-	Nothing -> Nothing
-	Just x -> ... some stuff with x ...
-\end{lstlisting}
-Mit dieser Erkenntnis können wir eine weitere Hilfsfunktion definieren \textbf{op}:
-\begin{lstlisting}
+				Just y -> Just (x 7 y)
+
+-- Abstrahieren
+
 op :: Maybe a -> (a -> Maybe b) -> Maybe b
 op val f = case val of
 	Nothing -> Nothing
 	Just x -> f x
-\end{lstlisting}
-Die Funktion \textbf{f} überführt einen Wert vom Typ $a$ in ein $Maybe b$. \textbf{op} betrachtet das Argument $val$ und wendet entweder \textbf{f} auf den in \textbf{Just} verpackten Wert an, oder gibt \textbf{Nothing} zurück.
-\begin{lstlisting}
+
 eval3 = eval Expr Just fA fD
 	where 
 		fA e1 e2 = e1 'op' (\x -> e2 'op' (\y -> (x + y)))
 		fA e1 e2 = e1 'op' (\x -> e2 'op' (\y -> (x / y)))
 \end{lstlisting}
 
-Der Taschenrechner von gestern hat jetzt eine Fehlerbehandlung die das Programm nicht abbricht, sondern eine adequate Fehlerbehandlung durchführt. (Fehlerhafte Werte werden mit \textbf{Nothing} symbolisiert.\\
-
-\section{Zustandsveränderung}
+\subsection{Zustandsveränderung}
 
 %Bild state_trans1.png
 \begin{figure}[h]
@@ -285,14 +257,9 @@ Der Taschenrechner von gestern hat jetzt eine Fehlerbehandlung die das Programm 
 	\label{img:statetrans}
 \end{figure}
 
-Taschenrechner können sich meist Werte für verschiedene Variablen oder das letzte Ergebenis merken. Wir versuchen hier letzteres zu speichern:
 \begin{lstlisting}
 type State = Float
-\end{lstlisting}
-\textbf{type} deklariert ein Type-Alias.\\
 
-Jetzt brauchen wir eine Funktion die zustandsveränderungen konkret behandeln kann. Quasi als eine Art Objekte (keine OOP-Objekte).
-\begin{lstlisting}
 update :: Float -> State -> State
 update f = max abs(f)
 
@@ -302,8 +269,8 @@ data St a = S(State -> (a,State))
 "Folgezustand" berechnen
 
 \begin{lstlisting}
-apply :: St a -> State -> (a, State) -- Startzustand -> (Ergebnis und Folgezustand)
-appl (S f) s = f s
+apply :: St a -> State -> (a, State)
+appl (S f) s = f s'
 \end{lstlisting}
 
 Unterschied data / type Listings:\\
@@ -315,15 +282,16 @@ Unterschied data / type Listings:\\
 eval4 :: Expr -> St Float
 eval4 = eval Expr fC fA fD
 	where
-		fC x = S (\s -> (x,s))
-		fA sx sy = S (\s -> let (x, s1) = apply sx s
+		fC x = St (\s -> (x,s))
+		fA sx sy = St (\s -> let (x, s1) = apply sx s
 									(y, s2) = apply sy s1
 								in (x + y, update(x+y) s2))
-		fA sx sy = S (\s -> let (x, s1) = apply sx s
+		fA sx sy = St (\s -> let (x, s1) = apply sx s
 									(y, s2) = apply sy s1
 								in (x / y, update(x/y) s2))
 \end{lstlisting}
-Man erkennt, hier kann man \textbf{apply} durch eine neue Funktion \textbf{ap} verkürzen:
+
+\subsection{Eval5, noch coolerer}
 \begin{lstlisting}
 ret x = S (\s -> (x,s))
 
@@ -342,8 +310,9 @@ eval5 = evalExpr fC fA fD
 					s(\s -> (x/y, update abs (x/y) s))))
 \end{lstlisting}
 
-\subsection{Zustände nutzen}
-Damit wir die Zustände auch verwenden können müssen wir sie auslesen und manipulieren können:
+\subsection{Jetzt ohne Zustände}
+Zwei Hilfsfunktionen:\\
+
 \begin{lstlisting}
 get :: St State
 get = S (\s -> (s,s))
@@ -352,7 +321,7 @@ put :: State -> St ()
 put s = S(\_ -> ((),s))
 \end{lstlisting}
 
-Unsere neue \textbf{Eval}-Funktion sieht danach so aus:
+$\rightarrow$
 
 \begin{lstlisting}
 stAct :: (State -> State) -> St ()
@@ -364,19 +333,21 @@ eval6 = evalExpr fC fA fD
 		fA sx sy = sx 'ap' (\x ->
 					sy 'ap'	 (\y -> 
 					stAct (update(x+y)) 'ap' (\() -> ret (x+y)))))
-		fD sx sy = sx 'ap' (\x ->
-					sy 'ap'	 (\y -> 
-					stAct (update(x\y)) 'ap' (\() -> ret (x\y)))))
 \end{lstlisting}
 
-Man sollte erkennen das es immer wieder gleiche Muster gibt. Dieses Muster tritt so häufig in der funktionalten Programmierung auf, dass man es in eine einheitliche Schnittstelle verpackt hat.
+\subsection{evals im Vergleich}
+\begin{compactitem}
+	\item eval3 und eval6 machen das gleiche, jedoch auf unterschiedliche Wege
+\end{compactitem}
+
 \section{Monaden}
 \begin{lstlisting}
 class Monad m where
 	return :: a -> m a
 	(>>=)	:: m a -> (a -> m b) -> m b
 \end{lstlisting}
-\textbf{ap} ist eine Monade!\\
+
+ap ist eine Monade!\\
 In Haskell schreibt man das so:
 \begin{lstlisting}
 instance Monad Maybe where
@@ -385,7 +356,7 @@ instance Monad Maybe where
 \end{lstlisting}
 
 \subsection{die letzte Eval-Funktion (wirklich!)}
-So implementiert man ungefähr immer eine Monade, \textbf{eval3}, \textbf{eval5} und \textbf{eval6} lassen sich so vereinfachen:
+So implementiert man ungefähr immer eine Monade\\
 \begin{lstlisting}
 evalM :: Monad m => Expr -> m Float
 evalM = eval Expr fC fA fD
@@ -401,6 +372,7 @@ evalM = eval Expr fC fA fD
 						then Nothing
 						else return (x/y))))
 \end{lstlisting}
+
 Für
 \begin{lstlisting}
 m >>= \x -> fx
@@ -410,8 +382,8 @@ schreibt man auch
 do x <- m
 	return (f x)
 \end{lstlisting}
+.\\
 
-Und
 \begin{lstlisting}
 m1 >> m2
 \end{lstlisting}
@@ -421,9 +393,6 @@ do	m1
 		m2
 \end{lstlisting}
 
-Für Monaden gibt es 3 Gesetze, die stehen in der Doku.
-
-\chapter{VL III}
-\section {und weiter...}
+Für Monaden gibt es 3 Gesetze, die stehen aber in der Doku.
 
 \end{document}
