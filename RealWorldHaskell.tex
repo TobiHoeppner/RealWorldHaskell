@@ -424,6 +424,229 @@ do	m1
 Für Monaden gibt es 3 Gesetze, die stehen in der Doku.
 
 \chapter{VL III}
-\section {und weiter...}
+\section {Wiederholung Monanden}
+Wir definieren uns unsere eigene Monade, dazu brauchen wir einen Datentyp:
+\begin{lstlisting}
+data Entweder a = Links String | Rechts a
+\end{lstlisting}
+
+Zur Erinnerung, Monaden sind wie folgt typisiert
+\begin{lstlisting}
+class Monad m where
+	return :: a -> m a
+	(>>=) :: m a -> (a -> m b) -> m b
+	(>>) :: m a -> m b -> m b
+	fail :: String -> m a
+\end{lstlisting}
+
+implementieren kann man das so:
+
+\begin{lstlisting}
+instance Monad Entweder where
+	return = Rechts 
+	m >>= f = case of
+		Rechts wert -> f wert
+		_ -> m
+	m >> n = case of
+		Rechts _ -> n
+		Links message -> Links message 
+	fail str = Links str
+\end{lstlisting}
+
+Im Grunde braucht man nur \textbf{return} und \textbf{(>>=)}(bind). \textbf{(>>)} und \textbf{fail} sind nettigkeiten die uns das Leben in bestimmten Situationen vereinfachen können. Es gibt stimmen die behaupten, man braucht diese Funktionen nicht und man könnte diese auch durch eine extra Monade darstellen.\\
+
+\subsection{Maybe Monad}
+\begin{lstlisting}
+instance Monad Maybe where
+	return Just
+	m >>= f = case m of
+		Just wert -> f wert
+		_ -> Nothing
+	fail _ = Nothing
+\end{lstlisting}
+
+Wie verwendet man diese Monade?
+
+\begin{lstlisting}
+f :: Int -> Maybe k
+f i = if i == 0 then Nothing else Just i
+\end{lstlisting}
+
+kann man mit der \textbf{Maybe} Monade auch so schreiben:
+\begin{lstlisting}
+f i = if i == 0 then fail "not 0" else return i
+\end{lstlisting}
+Nice to know: Listen in Haskell sind auch Monaden.
+
+\subsection{Die Id-Monade}
+\begin{lstlisting}
+data Id a = Id a
+\end{lstlisting}
+
+\begin{lstlisting}
+instance Monad Id where
+	return = Id 
+	(ID x) >>= f = f x 
+\end{lstlisting}
+
+Warum braucht man die?
+Wir kennen die Id-Funktion
+\begin{lstlisting}
+id :: a -> a
+id x = x
+\end{lstlisting}
+
+Für die Monaden gibt es noch keine ID Funktion. Deswegen definiert man sich die wie folgt:
+
+\begin{lstlisting}
+id :: Monad m => a -> Id a
+id x = return
+\end{lstlisting}
+
+Haskell kennt 2 Welten, alles ohne Monaden und alles mit Monaden. 
+Beispiele:
+Ohne Monaden:
+\begin{compactitem}
+\item id
+\item map
+\item ...
+\end{compactitem}
+Mit Monaden:
+\begin{compactitem}
+\item return
+\item mapM
+\item ...
+\end{compactitem}
+
+\subsubsection{Beispiel funktionale For-Schleife}
+
+\begin{lstlisting}
+print :: Show a => a IO ()
+
+main :: IO()
+main = do
+	let xss = ["Hallo", "Welt", "da draußen"]
+	mapM print xss
+\end{lstlisting}
+
+oder auch direkt mit \textbf{forM}
+
+\begin{lstlisting}
+forM :: [a] -> (a -> m b) -> m [b]
+
+main = do
+	let xss = ["Hallo", "Welt", "da draußen"]
+	forM xss $ do
+		...	-- irgendwas
+		...	-- irgendwas anderes
+		...	-- irgendwas weiteres
+	putStrLn "xxx"
+\end{lstlisting}
+
+Wie ist \textbf{forM} implementiert?
+
+\begin{lstlisting}
+
+\end{lstlisting}
+
+\section{Die IO-Monade}
+Bereits eine Ausgabe auf eine Konsole ist ein Seiteneffekt. In Haskell ist man aber eher exakt und möchte Seiteneffekte vermeiden. Dafür gibt es die IO-Monade, der Ansatz:
+\begin{lstlisting}
+main :: [Response] -> [Request]
+main (x:xs) = Print "Hello World" : main xs
+\end{lstlisting}
+Das ist ziemlich umständlich zu implementieren. Wurde trotzdem in Haskell 1.3 vorgeschlagen. Wie können wir jetzt elegant die Haskell-Welt verlassen? Richtig mit der IO-Monade:
+\begin{lstlisting}
+main :: IO()
+main = do
+	map print [8,9,9] 	--> [IO, IO, IO]
+	mapM print [8,9,9] 	-->	8
+											--	9
+											--	9
+\end{lstlisting}
+Die IO-Monade ist eine State-Monade. Die macht noch etwas mehr "magic" damit man "sauber" mit dem OS komunizieren kann.\\
+Monaden sind sehr mächtig. Man kann sich mit Monaden zwingen bestimmte Dinge nicht zu tun. Das ist hilfreich und gerade wenn man Monaden miteinander verbindet. Der Vorteil von Haskell ist gerade, das man mit Monaden zu bestimmten Situationen Seiteneffekte ausschliessen kann. Das ist gerade für "sichere" Software interessant.\\
+
+\section{Arbeiten mit Monaden}
+\subsection{Das Echo}
+\begin{lstlisting}
+module Main where
+-- putStr :: String -> IO()
+-- putStrLn :: String -> IO()
+-- print :: Show a => a -> IO()
+-- getLine :: IO String
+
+main :: IO()
+main = do
+	line <- getLine
+	putStrLn line
+	-- main -- für endlosschleife, alternativ zu main = forever $ do
+-- main = getLine >>= putStrLn
+
+main = forever (getLine >>= putStrln) -- cat in einer Zeile
+\end{lstlisting}
+
+\subsection{handles}
+Werden meist von anderen Funktionen übergeben. Man kann Handels mit entsprechenden h.. Funktionen.
+\begin{lstlisting}
+module Main where
+-- hputStr :: Handle -> String -> IO()
+-- hputStrLn :: Handle -> String -> IO()
+\end{lstlisting}
+
+\section{Gloss}
+Gloss ist echtes, extrem vereinfachtes OpenGL. Einfaches Beispiel: 
+\begin{lstlisting}
+import Graphics.Gloss
+
+main = display(InWindow "Nice Window" (200,200) (10,10)) white (Circle 80))
+\end{lstlisting}
+GHCi mag nicht unbedingt Gloss. Also erstmal bauen und dann ausführen.\\
+
+\subsection{komplexere Bilder}
+Wie zeichne ich ein komplexes Bild?\\
+\begin{lstlisting}
+import Graphics.Gloss
+
+main = display
+	(FullScreen (1280,800)) 
+	black
+	(
+		Pictures[
+			Translate (-200) 0 (Color red (Circle 100)),
+			Translate 100 0 (Color yellow (Circle 100)),
+			Color white (ThickCircle 100 200),
+			Translate 100 100 $ Color blue $ Circle 300
+		]		
+	) 
+\end{lstlisting}
+toll ist: man kann in Pictures einfach funktionen übergeben, die Funktionen sollte man natürlich vorher definieren. Das macht den Code lesbarer.
+\begin{lstlisting}
+redCircle = Color red $ Cricle 100
+yellowCircle = Color yellow $ Circle 100
+whiteCircle = Color white $ Circle 200
+
+main' = display
+	(FullScreen (1280,800)) 
+	black
+	(
+		Pictures[
+			Translate (-200) 0 redCricle,
+			Translate 100 0 yellowCircle,
+			whitecircle,
+			Translate 100 100 $ Color blue $ Circle 300
+		]		
+	)
+\end{lstlisting}
+
+Der Bildmittelpunkt ist entscheidend. $0,0$ ist der Mittelpunkt des Bildschirms.
+
+\subsection{Animationen}
+\begin{lstlisting}
+main = animate
+	(InWindow "Titel" (400, 300) (100, 100))
+	white
+	\t -> (Pictures)
+\end{lstlisting}
 
 \end{document}
