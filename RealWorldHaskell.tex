@@ -678,6 +678,181 @@ main = animate
 \end{lstlisting}
 
 \chapter{VL IV}
-\section{neuer Tag, neues Haskell:}
+\emph{Ich bin ein Fan von Einzeilern}
+\section{Nachtrag: Der EchoServer}
+% code einbinden
+% https://page.mi.fu-berlin.de/scravy/realworldhaskell/tag4/
+\begin{lstlisting}
+\end{lstlisting}
+
+\section{List-Monade}
+
+Listen in Haskell sind eigentlich auch Monaden:
+\begin{lstlisting}
+data List a = Nil | Cons a (List a)
+\end{lstlisting}
+
+Wie funktioniert das?:
+\begin{lstlisting}
+[1,2,3] 	= Cons 1 ( Cos 2 ( Cons 3 Nil))
+			= 1 : 2 : 3 : []
+\end{lstlisting}
+
+Die Monade ist wie folgt definiert:
+\begin{lstlisting}
+instance Monad List where
+	-- :: a -> List a
+	return a = [a]
+	-- :: List a -> (a -> List b) -> List b
+	as >>= f =  concat $ map f as
+\end{lstlisting}
+Idee für Bind:\\
+Ich hab eine Liste mit vielen Elementen von Typ a also [a,a,...,a]. Die Bindfunktion macht aus jedem a eine Liste mit Elementen von Typ b: [[b,..,b],...,[b,..,b]]. Am Ende müssen wir für jedes b eine eine Funktion anwenden die daraus wieder b's generiert. \\
+
+Jetzt muss man zeigen das alle 3 Monadengesetze gelten.
+
+\subsection{Das 1. Monadengesetz}
+Wir wollen zeigen:
+\begin{lstlisting}
+return a >>= f = f a
+\end{lstlisting}
+Was macht das?\\
+\textbf{return} $a$ steckt $a$ in eine Monade. \textbf{(>>=)}(Bind) nimmt $a$ wieder aus der Monade und wendet \textbf{f} darauf an. Also muss das Ergebnis das gleiche sein wie einfach nur \textbf{f} auf $a$ angewendet.\\
+
+\textbf{Beweis:}
+\begin{lstlisting}
+return a >>= f
+= [a] >>= f
+= concat (map f [a])
+= concat ([f a])
+= f a
+\end{lstlisting}
+q.e.d % box einfügen
+
+\section{Was ist eigentlich (>>=)?}
+Zur Erinnerung man kann schreiben:
+\begin{lstlisting}
+a <- m
+f a
+\end{lstlisting}
+für 
+\begin{lstlisting}
+m >>= (\a -> f a)
+\end{lstlisting}
+Jetzt sehen wir uns am Beispiel von Listen an was der Bind-Operator eigentlich genau macht:
+\begin{lstlisting}
+f :: [a] -> [b] -> [(a,b)]
+f xs ys = d
+	a <- xs
+	b <- ys
+	return (a, b)
+\end{lstlisting}
+Wir erhalten hier das kartesiche Produkt der 2 Listen. Folgend mit $X$ dargestellt:
+\begin{lstlisting}
+f xs ys = xs X ys
+\end{lstlisting}
+Intiutives Beispiel:
+\begin{lstlisting}
+f [1,2] [3,4]
+	= [(1,3),(1,4),(2,3),(2,4)]
+\end{lstlisting}
+
+\section{Funktoren}
+\emph{Is nich so fancy wie es klingt...}
+
+Wir haben hoffentlich alle schonmal was geschrieben wie:
+\begin{lstlisting}
+map :: (a -> b) -> List a -> List b
+map f [x1,..,xn] = [f x1,...,f xn]
+\end{lstlisting}
+
+Zur Veranschaulichung definieren wir uns einen Baum:
+\begin{lstlisting}
+data Baum a = Leaf | Node (Baum a) a (Baum a)
+\end{lstlisting}
+
+Wie kann ich jetzt map auf Bäume anwenden?\\
+Man definiert sich eine eigene Map-Funktion für seine Datenstruktur:
+
+\begin{lstlisting}
+mapBaum :: (a -> b) -> Baum a -> Baum b
+mapBaum _ Leaf = Leaf
+mapBaum f (Node l a r) = Node (mapBaum f l) (f a) (mapBaum f r)
+\end{lstlisting}
+Fertig.
+\subsection{Beispiel Maybe}
+\begin{lstlisting}
+data Maybe a = Just a | Nothing
+\end{lstlisting}
+Oh, cool! \textbf{Maybe} ist auch polymorph! Also können wir uns \textbf{mapMaybe} definieren.
+\begin{lstlisting}
+mapMaybe :: (a -> b) -> Maybe a -> Maybe b
+mapMaybe _ Nothing = Nothing
+mapMaybe f (Just a) = Just $ f a
+\end{lstlisting}
+
+Wir erkennen ein Muster! Also abstrahieren wir.\\
+
+\subsection{fmap}
+Das $f$ vor dem \textbf{map} steht für Funktor. Wir kennen ja bereits dass man Buchstaben hinter bestimmte Funktionen schreibt. Zum Beispiel \textbf{mapM} mit $M$ für Monaden.
+
+\begin{lstlisting}
+fmap :: Functor f => (a -> b) -> f a -> f b
+
+class Functor a where
+	fmap ...
+\end{lstlisting}
+
+Es gibt zwei \textbf{Funktorengesetze}.
+\subsection{Funktorengestze}
+\begin{compactenum}
+	\item Ich möchte nichts verändern, wenn ich nichts mache!
+	\begin{lstlisting}
+fmap id = id
+	\end{lstlisting}
+	\item Wende ich mehrere Funktionen mit fmap an, so soll die Reihenfolge keinen Einfluss auf das Ergebnis haben:
+	\begin{lstlisting}
+fmap (f.g) = fmap f . fmap g
+	\end{lstlisting}
+\end{compactenum}
+
+\subsection{ein eigener Funktor}
+Man kann sich auch zusätzliche Funktoren definieren. Wenn man sich einen eigenen Datentyp erstellt hat. Dann kann man sich so einen Funktor dazu definieren.
+\begin{lstlisting}
+instance Functor Baum where
+	fmap = mapBaum
+\end{lstlisting}
+
+\subsection{Beispiel für die Verwendung}
+Wir wollen sowas wie:
+\begin{lstlisting}
+main = do
+	getArgs :: IO[String]
+	head :: [a] -> a
+	
+	head $ getArgs -- geht nicht, aber
+
+	head 'fmap' getArgs -- geht
+	head <$> getArgs -- und das hier auch!
+	-- machen beide das gleiche
+\end{lstlisting}
+
+\section{DataRecords}
+\subsection{DataRecords definieren}
+DataRecords sind Datenstrukturen wo die Parameter konkrete Namen haben. Der Vorteil ist dabei, das es auch gleich Konstruktoren sind und man kann sie verwenden.
+\begin{lstlisting}
+data Client = Client{
+	clientHandle :: Handle
+	, clientHost :: Hostname
+	, clientPort :: PortNumber
+}
+\end{lstlisting}
+
+\subsection{DataRecord update syntax}
+sind quasi setter
+\begin{lstlisting}
+client{clientPort = 9000}
+\end{lstlisting}
+ändert den Port auf 9000.\\
 
 \end{document}
