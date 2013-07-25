@@ -13,11 +13,11 @@
 -----------------------------------------------------------------------------
 
 module Gui (
-world
+
 ) where
 
-import Graphics.Gloss.Interface.Pure.Simulate (..)
-
-world =
+import Graphics.Gloss.Data.Display
+import Graphics.Gloss.Interface.Pure.Simulate (simulate)
+import Graphics.Gloss.Data.Color (white)
 
 

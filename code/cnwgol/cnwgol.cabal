@@ -7,18 +7,10 @@ license-file: ""
 synopsis: Conways Game of Life
 description: using gloss.
 data-dir: ""
- 
+
 executable cnwgol
-    build-depends: QuickCheck -any, base -any
+    build-depends: QuickCheck -any, base -any, gloss
     main-is: Main.hs
     buildable: True
     hs-source-dirs: src
     other-modules: Gui
- 
-test-suite test-cnwgol
-    build-depends: QuickCheck -any, base -any
-    type: exitcode-stdio-1.0
-    main-is: Main.hs
-    buildable: True
-    cpp-options: -DMAIN_FUNCTION=testMain
-    hs-source-dirs: src
