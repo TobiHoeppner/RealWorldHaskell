@@ -61,12 +61,13 @@ Haskell Compiler ist mächtig. Weil die Semantik und Typsystem wilde Sachen erla
 
 \subsection{der kleine Webserver}
 
-\lstinputlisting{code/VL/webserver.hs}
+%Todo code aus Folien abschreiben und fertigen Webserver an anderer Stelle schreiben.
+\lstinputlisting{code/VL/day1/webserver.hs}
 
 Was nicht behandelt wurde:
 \begin{compactitem}
-\item Fehlerfälle, Exceptions
-Haskell unterstütz Exceptions 
+\item Fehlerfälle, Exceptions\\
+Ja, Haskell unterstützt Exceptions.
 \item Effizienz
 \end{compactitem}
 
@@ -108,12 +109,16 @@ listenOn: $\_ \leftarrow \ IO\_$
 f a b
 \end{lstlisting}
 a ist eine Fkt. g x k\\
-b ist eine Fkt. k fv
-
+b ist eine Fkt. k fv\\
+für
+\begin{lstlisting}
+f (g x k) (k f v)
+\end{lstlisting}
+kann man auch 
 \begin{lstlisting}
 f $ g x k $ k f v
 \end{lstlisting}
-
+schreiben.\\
 \subsection{!!-Operator}
 Gibt das angegebene Element aus der Liste zurück.
 \begin{lstlisting}
@@ -164,17 +169,20 @@ m k v
 
 \section{Stdlib - System.IO}
 \begin{compactitem}
-\item Textinput / Textoutput
-\begin{compactitem}
-\item Print
-\item getLine
-\item getChar
-\end{compactitem}
+	\item Textinput / Textoutput
+		\begin{compactitem}
+			\item Print
+			\item getLine
+			\item getChar
+		\end{compactitem}
 \end{compactitem}
 
 \section{Stdlib - System.Environment}
 \begin{compactitem}
-\item getArgs
+	\item getArgs
+	\begin{compactitem}
+		\item Liest Porgrammargumente aus und liefert einen IO String
+	\end{compactitem}
 \end{compactitem}
 
 \section{Kommentare und Haddock}
@@ -184,11 +192,11 @@ m k v
 {- mehrzeiliger Kommentar 
 	{- verschachtelter Kommentar -} 
 -}
--- | haddoc kommentar
+-- | Haddockkommentar
 \end{lstlisting}
 
 \section{Keywords}
-Programming Guidelines sind brauchbar
+Programming Guidelines sind brauchbar, eine Main sollte möglichst immer folgendes Muster haben:
 \begin{lstlisting}
 main = do 
 	args <- getArgs
@@ -453,8 +461,8 @@ instance Monad Entweder where
 	fail str = Links str
 \end{lstlisting}
 
-Im Grunde braucht man nur \textbf{return} und \textbf{(>>=)}(bind). \textbf{(>>)} und \textbf{fail} sind nettigkeiten die uns das Leben in bestimmten Situationen vereinfachen können. Es gibt stimmen die behaupten, man braucht diese Funktionen nicht und man könnte diese auch durch eine extra Monade darstellen.\\
-
+Im Grunde braucht man nur \textbf{return} und \textbf{(>>=)}(bind). \textbf{(>>)} und \textbf{fail} sind nettigkeiten die uns das Leben in bestimmten Situationen vereinfachen können. Es gibt Stimmen aus der Haskell Community die behaupten, dass man diese Funktionen nicht braucht und man könnte diese auch durch eine extra Monade ersetzten. (Anmerk. Tobi: \emph{Müssen wohl Puristen gewesen sein.})\\
+\newpage
 \subsection{Maybe Monad}
 \begin{lstlisting}
 instance Monad Maybe where
@@ -476,7 +484,7 @@ kann man mit der \textbf{Maybe} Monade auch so schreiben:
 \begin{lstlisting}
 f i = if i == 0 then fail "not 0" else return i
 \end{lstlisting}
-Nice to know: Listen in Haskell sind auch Monaden.
+Nice to know: Listen in Haskell sind auch Monaden.\\
 
 \subsection{Die Id-Monade}
 \begin{lstlisting}
@@ -503,8 +511,7 @@ id :: Monad m => a -> Id a
 id x = return
 \end{lstlisting}
 
-Haskell kennt 2 Welten, alles ohne Monaden und alles mit Monaden. 
-Beispiele:
+Haskell kennt 2 Welten, alles ohne Monaden und alles mit Monaden. Beispiele:\\
 Ohne Monaden:
 \begin{compactitem}
 \item id
@@ -518,7 +525,7 @@ Mit Monaden:
 \item ...
 \end{compactitem}
 
-\subsubsection{Beispiel funktionale For-Schleife}
+\subsubsection{Beispiel: funktionale For-Schleife}
 
 \begin{lstlisting}
 print :: Show a => a IO ()
@@ -555,7 +562,7 @@ Bereits eine Ausgabe auf eine Konsole ist ein Seiteneffekt. In Haskell ist man a
 main :: [Response] -> [Request]
 main (x:xs) = Print "Hello World" : main xs
 \end{lstlisting}
-Das ist ziemlich umständlich zu implementieren. Wurde trotzdem in Haskell 1.3 vorgeschlagen. Wie können wir jetzt elegant die Haskell-Welt verlassen? Richtig mit der IO-Monade:
+Das ist ziemlich umständlich zu implementieren. Wurde trotzdem in Haskell 1.3 vorgeschlagen. Wie können wir jetzt elegant die Haskell-Welt verlassen?\\ Richtig, mit der IO-Monade:
 \begin{lstlisting}
 main :: IO()
 main = do
@@ -565,29 +572,48 @@ main = do
 											--	9
 \end{lstlisting}
 Die IO-Monade ist eine State-Monade. Die macht noch etwas mehr "magic" damit man "sauber" mit dem OS komunizieren kann.\\
-Monaden sind sehr mächtig. Man kann sich mit Monaden zwingen bestimmte Dinge nicht zu tun. Das ist hilfreich und gerade wenn man Monaden miteinander verbindet. Der Vorteil von Haskell ist gerade, das man mit Monaden zu bestimmten Situationen Seiteneffekte ausschliessen kann. Das ist gerade für "sichere" Software interessant.\\
-
+Monaden sind sehr mächtig. Man kann sich mit Monaden zwingen bestimmte Dinge nicht zu tun. Das ist hilfreich und gerade wenn man Monaden miteinander verbindet. Dieses Konzept ist auch der ultimative Vorteil von Haskell, dass man mit Monaden zu bestimmten Situationen Seiteneffekte ausschliessen kann, einfach weil sie durch Monaden ausgeschlossen wurden. Das ist gerade für "sichere" Software interessant.\\ (Anmerk. Tobi: \emph{Wie definiert man hier sichere Software?})
+\newpage
 \section{Arbeiten mit Monaden}
 \subsection{Das Echo}
+Zur Erinnerung, wichtige Funktionen die man braucht um mit der Außenwelt zu kommunizieren:
 \begin{lstlisting}
 module Main where
--- putStr :: String -> IO()
--- putStrLn :: String -> IO()
--- print :: Show a => a -> IO()
--- getLine :: IO String
-
+	putStr :: String -> IO()
+	putStrLn :: String -> IO()
+	print :: Show a => a -> IO()
+	getLine :: IO String
+\end{lstlisting}
+Einfaches Echo:
+\begin{lstlisting}
 main :: IO()
 main = do
 	line <- getLine
 	putStrLn line
-	-- main -- für endlosschleife, alternativ zu main = forever $ do
--- main = getLine >>= putStrLn
-
-main = forever (getLine >>= putStrln) -- cat in einer Zeile
 \end{lstlisting}
-
+einfaches Echo - Einzeiler:
+\begin{lstlisting}
+main = getLine >>= putStrLn
+\end{lstlisting}
+unendliches Echo
+\begin{lstlisting}
+main = do
+	line <- getLine
+	putStrLn line
+	main
+\end{lstlisting}
+oder
+\begin{lstlisting}
+main = forever $ do
+	line <- getLine
+	putStrLn line
+\end{lstlisting}
+\subsubsection{cat - in einer Zeile}
+\begin{lstlisting}
+main = forever (getLine >>= putStrln)
+\end{lstlisting}
 \subsection{handles}
-Werden meist von anderen Funktionen übergeben. Man kann Handels mit entsprechenden h.. Funktionen.
+Werden meist von anderen Funktionen übergeben. Man kann Handels mit entsprechenden \textbf{h..}-Funktionen verwenden. Zum Beipsiel:
 \begin{lstlisting}
 module Main where
 -- hputStr :: Handle -> String -> IO()
@@ -622,11 +648,13 @@ main = display
 \end{lstlisting}
 toll ist: man kann in Pictures einfach funktionen übergeben, die Funktionen sollte man natürlich vorher definieren. Das macht den Code lesbarer.
 \begin{lstlisting}
+import Graphics.Gloss
+
 redCircle = Color red $ Cricle 100
 yellowCircle = Color yellow $ Circle 100
 whiteCircle = Color white $ Circle 200
 
-main' = display
+main = display
 	(FullScreen (1280,800)) 
 	black
 	(
@@ -639,7 +667,7 @@ main' = display
 	)
 \end{lstlisting}
 
-Der Bildmittelpunkt ist entscheidend. $0,0$ ist der Mittelpunkt des Bildschirms.
+\textbf{Wichtig:} $0,0$ ist der Mittelpunkt des Bildschirms.
 
 \subsection{Animationen}
 \begin{lstlisting}
@@ -648,5 +676,8 @@ main = animate
 	white
 	(\t -> Pictures [ Line [(0, 100), (0, -100)] , Translate (10*t) 0 (Circle 80) ] )
 \end{lstlisting}
+
+\chapter{VL IV}
+\section{neuer Tag, neues Haskell:}
 
 \end{document}
