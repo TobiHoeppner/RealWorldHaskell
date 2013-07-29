@@ -1,10 +1,10 @@
 Version of workspace file format:
                1
 Time of storage:
-               "Thu Jul 25 13:08:03 Mitteleurop\245ische Sommerzeit 2013"
+               "Mon Jul 29 13:27:06 Mitteleurop\245ische Sommerzeit 2013"
 Name of the workspace:
                "s"
 File paths of contained packages:
-               ["cnwgol\\cnwgol.cabal","u3\\u3.cabal","u2\\u2.cabal","u1\\u1.cabal"]
+               ["u4\\u4.cabal","C:\\Users\\Tobi Mobile\\Documents\\Studium\\6semester\\gol\\gol.cabal","u3\\u3.cabal","u2\\u2.cabal","u1\\u1.cabal"]
 Maybe file path of an active package:
-               Just "cnwgol\\cnwgol.cabal"
+               Just "u4\\u4.cabal"

@@ -1,0 +1,16 @@
+name: u4
+version: 0.0.1
+cabal-version: >=1.2
+build-type: Simple
+license: AllRightsReserved
+license-file: ""
+description: concurrent haskell stuff
+data-dir: ""
+
+executable u4
+    build-depends: base -any, random, monad-par
+    main-is: Main.hs
+    buildable: True
+    hs-source-dirs: src
+    other-modules: QuickSort
+
