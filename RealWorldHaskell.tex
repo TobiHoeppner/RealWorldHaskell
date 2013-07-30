@@ -856,6 +856,208 @@ client{clientPort = 9000}
 ändert den Port auf 9000.\\
 
 \chapter{VL V}
-\section{projekte und so}
+\section{Parallel Haskell}
+\subsection{Möglichkeiten}
+\begin{compactitem}
+\item par-Monade
+\item eval-Monade
+\item Strategys
+\end{compactitem}
+
+\subsection{par-Monade}
+\begin{lstlisting}
+-- schon implementiert und unter Control.Monad.Par verfügbar
+-- muss vorher installiert werden
+-- cabal install monad-par
+data Par a
+\end{lstlisting}
+Zunächst braucht man einen NFD-Datentyp, damit kann man die Funktionen fork, spawn verwenden.
+\begin{lstlisting}
+fork :: Par () -> Par ()
+spawn :: Par a -> Par (IVar a)
+\end{lstlisting}
+\textbf{fork} erlaubt uns nicht mit dem neuen Prozess zu "reden", wir bekommen hier kein Ergebnis zurück. \textbf{fork} ist also nur ein Nebeneffekt. Für das parallele Berechnen als nicht brauchbar, aber für dienliche andere Aufgaben (Ausgaben auf stdio z.B.).\\
+Besser ist \textbf{spawn}. Die aus \textbf{spawn} resultierende \textbf{IVar a} Variable dient der IPC (inter process communication). \textbf{IVar a} ist also nichts anderes als ein Future.\\
+Wie verwendet man das?
+\begin{lstlisting}
+eval :: Par a
+eval = do
+	future <- spawn(return(f x))	-- erzeugt neuen Thread der f x berechnet
+	result <- get future			-- erzwingt die Ausführung von f x und blockiert ggf. das Programm
+	return result
+
+erg = runPar eval
+\end{lstlisting}
+
+In der Variabel future steht eventuell schon das Ergebnis, dass wird aber nicht zugesichert und es kann sein, das der Wert noch nicht berechent wurde. Wenn man das Ergebnis sofort benötigt, dann muss man diese Variable mit \textbf{get} aufrufen. \textbf{get} blockiert das Programm solange bis das Ergebnis der Berechnung fest steht.\\
+Wir zeigen hier dem Compiler quasi wo er bestimmte Aufgaben parallelisieren kann. Das OS und der Compiler können dann entscheiden, ob ein zusätzlicher Thread erzeugt wird. Wichtig ist die Datenunabhängigkeit der Threads.\\
+
+\section{Concurrent Haskell}
+\begin{lstlisting}
+-- aus dem Paket Control.Concurrent
+forkIO :: IO() -> IO ThreadID
+\end{lstlisting}
+
+%Bild GHC-schedule
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=150px]{gfx/ghc-schedule.png}
+	\caption{GHC hat eigene kleinere Prozesse}
+	\label{img:ghc-sched}
+\end{figure}
+GHC hat seinen eigenen Scheduler. Der OS-Scheduler sieht nur den GHC-Prozess.\\
+Das hat den Vorteil, das GHC geteilten Speicher ermöglicht. Damit kommen dann alle Probleme wie aus ALP4 bekannt sind wieder hoch.\\
+
+\subsection{MVar}
+M steht vermutlich für mutable.
+\begin{lstlisting}
+takeMVar -- liest aus MVar wenn etwas drin ist, sonst wartet es bis etwas drin ist
+putMVar -- schreibt in MVar wenn diese leer sind, sonst wartet es bis diese MVar leer ist
+\end{lstlisting}
+Beides sind blocking Methoden. MVars sind quasi ungepufferte, asynchr., beschränkte Kanäle (Puffergröße 1).\\
+Weiterhin kann man MVars als Locks betrachten. Ebenfalls kann man MVars als binäre Semaphore verwenden, jedoch sollte man hier aufpassen wie man ein binäres Semaphore definiert hat.\\
+
+\subsection{Beispiel}
+Parallel Quicksort
+\begin{lstlisting}
+module ParQuickSort where
+
+import Control.Monad.Par
+
+-- Grundidee für QS sequentiell
+quickSort [] = []
+quickSort (x:xs) = quickSort [y | y <- xs, y <- x] ++ [x] ++ quickSort [y | y <- xs, y >= x]
+
+parQuicksort [] = []
+parQuicksort (x:xs) = runPar $ do
+	f1 <- spwan (return (parQuicksort [y | y <- xs, y < x])) 
+	f2 <- spwan (return (parQuicksort [y | y <- ys, y >= x]))
+	left <- get f1
+	right <. get f2
+	return $ left ++ [x] ++ right
+\end{lstlisting}
+
+Es ist schon sinvoller sich ein günstiges Pivot-Element zu wählen. Den Median kann man in O(n) bestimmen.\\
+
+\section{STM - Software Transactional Memory}
+\emph{kurzer Abriss, für ausführliche Infos siehe Mitschrift auf Homepage}
+\subsection{Die Idee}
+STM verwendet Transkationen. Transkationen können mehrere Befehle sein, die hintereinander ausgeführt werden sollen. Sollte während der Ausführung eine Störung (also irgendeine Art Fehler, inkonsitenz o.Ä.) auftretten, wird diese Transaktion zurück gerollt (roll-back) und später nochmal versucht.\\
+Beispiel:
+\begin{lstlisting}
+BEGIN
+	Hebe x von KTO A ab
+	Zahle x auf KTO B ein
+END
+\end{lstlisting}
+
+\subsection{TVar}
+Sind Variablen auf die man Transkationen definieren kann. Diese werden Atomar auszuführen.
+
+\begin{lstlisting}
+atomically $ do 
+	a <- readTVar x
+	if a < 0		-- Fehlerbedingung
+	then retry		-- nochmal versuchen
+	else -- weiter
+\end{lstlisting}
+
+\textbf{retry} ist (GHC-spezifisch) so realisiert, das der Thread erstmal schlafen gelegt wird. Man versucht den Thread dann "klug" zu wecken, also immer dann wenn in einer der TVars in der Transaktion geschrieben wurde.\\
+
+\section{Laziness vs. Strictness}
+\emph{Haskell ist faul... (ich auch)}\\
+Sowas wie 
+\begin{lstlisting}
+let x = [1,2,..]
+\end{lstlisting}
+ist offensichtlich eine Endlosschleife. Da Haskell aber faul ist wird diese Liste aber nur soweit berechnet, wie benötigt.\\
+Das klingt erstmal wie ein Vorteil, hat aber auch Nachteile. Zum einen braucht man ziemlich viel Speicher und zum anderen schießt man sich größere Lücken in den Speicher.\\
+\subsection{Was heißt eigentlich strict?}
+%(Rechterwinkel) = Bottom.
+f ist strikt in x $\leftrightarrow$ f %(Rechterwinkel) = %(Rechterwinkel)
+\begin{lstlisting}
+f x = const 5 x 
+f (error "_") -> 5
+\end{lstlisting}
+
+Das Problem:
+\begin{lstlisting}
+foldl (+) 0 [1,2,3,4]
+= foldl (+) (0+1) [2,3,4]
+= foldl (+) (0+1)+2 [3,4]
+= foldl (+) ((0+1)+2)+3 [4]
+= foldl (+) (((0+1)+2)+3)+4 []
+= (((0+1)+2)+3)+4
+= ((1+2)+3)+4
+= (3+3)+4
+= 6+4
+= 10
+\end{lstlisting}
+
+Wie wir sehen können wird dieser Ausdruck "unglaublich" groß. Diese Phänomen haben wir sehr oft in Haskell. Man verbraucht sehr viel Speicher und das ist ein Nachteil.
+
+\begin{lstlisting}
+f $ x
+\end{lstlisting}
+$\rightarrow$ f \$! x\\
+
+%(Rechterwinkel) `seq`b = %(Rechterwinkel)
+a`seq`b = b
+
+\begin{lstlisting}
+const 5$ [error"_"]
+\end{lstlisting}
+$\rightarrow$ 5
+
+\begin{lstlisting}
+const 5$! [error"_"]
+\end{lstlisting}
+$\rightarrow$ error\\
+
+Das strickte foldl`:
+\begin{lstlisting}
+foldl (+) 0 [1,2,3,4]
+= foldl (+) 1 [2,3,4]
+= foldl (+) 3 [3,4]
+= foldl (+) 6 [4]
+= foldl (+) 10 []
+= 10
+\end{lstlisting}
+spart Speicherplatz! Man hat Lineare Speichermenge in der Größe der Eingabe.\\
+
+\begin{lstlisting}
+const 5$ [error"_"]
+\end{lstlisting}
+$\rightarrow$ 5
+
+\begin{lstlisting}
+const 5$! [error"_"]
+\end{lstlisting}
+$\rightarrow$ 5\\
+
+$\rightarrow$ Weak head normal form:\\
+$(5+7) \rightarrow  12$ ist nicht in Normalform\\
+$=(+) 5 7$\\
+$=((\lambda xy.x+y)5) (7)$
+
+$(\lambda x \rightarrow \ 2 + x )$ ist in NF //
+$(\lambda x. 2 + x)$ ist in WHNF\\
+
+$[4, 2+2]$ ist nicht in NF//
+$= $Cons$4($Cons$(2+2))$ ist aber in WHNF\\
+
+\subsection{deepseq}
+Wenn wir sicherstellen wollen, dass eine Datenstruktur vollständig bearbeitet wird, brauchen wir ein deepsec.\\
+\begin{lstlisting} 
+a 'deepseq' b = $!!
+\end{lstlisting}
+
+Für parallele Ausführungen braucht man also Daten auf die eine Normalform definiert ist.
+\begin{lstlisting} 
+NFData a => 
+\end{lstlisting}
+sichert genau das zu.
 
 \end{document}
+
+

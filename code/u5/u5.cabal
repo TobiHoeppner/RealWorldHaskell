@@ -1,0 +1,15 @@
+name: u5
+version: 0.0.1
+cabal-version: >=1.2
+build-type: Simple
+license: AllRightsReserved
+license-file: ""
+description: key value server
+data-dir: ""
+
+executable u5
+    build-depends: QuickCheck -any, base -any, network, containers, stm
+    main-is: Main.hs
+    buildable: True
+    hs-source-dirs: src
+    other-modules: Store KVServer
