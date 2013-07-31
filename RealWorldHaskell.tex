@@ -1058,6 +1058,179 @@ NFData a =>
 \end{lstlisting}
 sichert genau das zu.
 
+\subsection{Beispiel: Remote Key-Value-Store}
+\subsubsection{Sequentiell}
+\begin{lstlisting}
+main = do
+	s <- listenOn... -- socket
+	let serve d = do
+		(h,_,_)<-accept s
+		...	...	>>= case cmd of
+		Get -> lookup pilt >> serve d
+\end{lstlisting}
+
+\subsubsection{Nicht Sequentiell}
+\begin{lstlisting}
+main = do
+	s <- ... -- socket
+	m <- newMVar Map.empty
+	forever $ do
+		(h,_,_)<-accept s
+		forkIO $ do
+			... case h of 
+				GET = 
+				PUT = 
+\end{lstlisting}
+Das Problem hier ist der Flaschenhals (bottleneck) beim Put. Da es alles blockiert wenn geschrieben werden soll. Damit werden auch alle Leser am Zugriff gehindert.\\ 
+\subsubsection{Nicht Seq. mit STM}
+\begin{lstlisting}
+main = do
+	s <- ... -- socket erzeugen
+	st <- atomically $ newTVar $ Map.empty -- speicher holen
+	forever $ do
+		(h,_,_)<-
+		forkIO $ do
+		... case h of
+		GET -> do {atomically $ readTVar st >>= {-Ausgabe-}}
+		PUT -> do {atomically $ readTVar st >>= {-verändern-} >>= writeTVar m >>= {-ACK-}}
+\end{lstlisting}
+
+\textbf{atomically} und das STM-System in Haskell nehmen uns viel Arbeit hab. Möchte man Transaktionen selbst bedienen, braucht man \textbf{orElse} und \textbf{retry}\\
+
+\chapter{VL VI}
+\section{GHC unter der Haube}
+Der GHC bringt die "Effizienz" von Haskell. Das Typsystem von Haskell erlaubt Compileroptimierungen viel schneller als andere Compiler.\\
+
+%Bild
+% Todo Bild anpassen
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=220px]{gfx/GHC_uh.png}
+	\caption{Optimierungen im GHC}
+	\label{img:ghc-opt}
+\end{figure}
+
+\section{Monadentransformation}
+\subsection{Lambda Interpreter in Haskell}
+\begin{lstlisting}
+data Exp = Lit Integer
+	| Var Name
+	| Plus Exp Exp
+	| Abs Name Exp
+	| App Exp Exp
+	deriving (Show)
+\end{lstlisting}
+
+\begin{lstlisting}
+data Value = IntVal Integer
+	| FunVal Env Name Exp
+\end{lstlisting}
+
+\begin{lstlisting}
+type Env = Map Name Value
+\end{lstlisting}
+
+\subsubsection{Das Problem}
+\begin{lstlisting}
+eval0 :: Env -> Exp -> Value
+eval0 _ (Lit i) = IntVal i
+eval0 env (Lit n) = env ! n
+eval0 env (Plus e1 e2) = let IntVal i1 = new eval0 env e1
+														 IntVal i2 = new evak0 env e2
+												 in IntVal (i1 + i2)
+eval0 env (Abr n exp) = FunVal env n exp
+eval0 env (App e1 e2) = let v1 = eval0 env e1
+														v2 = eval0 env e2
+												in case v1 of (FunVal e n x) -> eval0 env x				
+\end{lstlisting}
+Hier fehlt die Fehlerbehandlung. Zum Beispiel könnte man zwei Funktionen übergeben.\\
+
+\subsubsection{Lösung Schritt 1: umbauen in Monandischen Stil}
+\begin{lstlisting}
+eval1 :: Monad m => Env -> Exp -> Value
+eval1 _ (Lit i) = return $ IntVal i
+eval1 env (Lit n) = env 'lockup' n
+eval1 env (Plus e1 e2) = do IntVal i1 <- new eval0 env e1
+														 IntVal i2 <- new evak0 env e2
+												 in return $ IntVal (i1 + i2)
+eval1 env (Abr n exp) = return $ FunVal env n exp
+eval1 env (App e1 e2) = do v1 <- eval0 env e1
+														 v2 <- eval0 env e2
+												 in case v1 of (FunVal e n x) -> eval0 env x				
+\end{lstlisting}
+Jetzt haben wir durch das \textbf{lookup} bereits eine kleine Fehlerbehandlung realisiert. Je nach verwendeter Monade bekommt man z.B. \textbf{Nothing} zurück.\\
+
+\subsubsection{Beispiel: Id Monade}
+Implementierung siehe:
+\begin{lstlisting}
+import Control.Monad.Identity
+\end{lstlisting}
+wir verwenden Id um Eval weiter zu verbessern.
+\begin{lstlisting}
+type Eval a = Identity a
+runEval :: Eval a -> a
+runEval x = runIdentity x
+\end{lstlisting}
+
+%Bild monadstack
+
+
+\subsubsection{Lösung Schritt 2: ordentliche Fehlerbehandlung}
+Wir verschachteln jetzt die \textbf{ErrorT}-Monade um die Id-Monade.
+\begin{lstlisting}
+import Control.Monad.ErrorT
+-- :k ErrorT
+-- * -> (* -> *) -> * -> *
+
+type Eval a = Identity a
+
+runEval :: Eval a ->
+runEval x = runIdentity (runErrorT x)
+\end{lstlisting}
+Wir "erben" jetzt die Funktionen von ErrorT. Zum Beispiel \textbf{throwError}. Damit können wir unser Programm ändern und mehr Sachen machen.
+\begin{lstlisting}
+newtype Exc = 	Exc Exp String
+\end{lstlisting}
+
+\begin{lstlisting}
+eval1 :: Monad m => Env -> Exp -> Value
+eval1 _ (Lit i) = return $ IntVal i
+eval1 env (Lit n) = env 'lockup' n of {
+											Just v -> return n; 
+													 _ -> throwError $ Exc e "not Found"}
+eval1 env (Plus e1 e2) = do IntVal i1 <- new eval0 env e1
+														 IntVal i2 <- new evak0 env e2
+												 in return $ IntVal (i1 + i2)
+eval1 env (Abr n exp) = return $ FunVal env n exp
+eval1 env (App e1 e2) = do v1 <- eval0 env e1
+														 v2 <- eval0 env e2
+												 in case v1 of (FunVal e n x) -> eval0 env x				
+\end{lstlisting}
+\subsubsection{Lösung Schritt 3: readerT}
+Wir fügen die readerT Monande zu unserem Konstrukt hinzu.\\
+\begin{lstlisting}
+import Control.Monad.Identity
+import Control.Monad.ErrorT
+import Control.Monad.Reader
+
+type Eval a = a
+runEval :: Eval a -> a
+runEval x = runIdentity (runErrorT (runReaderT x))
+\end{lstlisting}
+
+\begin{lstlisting}
+eval1 :: Monad m => Env -> Exp -> Value
+eval1 (Lit i) = return $ IntVal i
+eval1 (Lit n) =  do{env <- ask}'lockup' n of {
+											Just v -> return n; 
+													 _ -> throwError $ Exc e "not Found"}
+eval1 (Plus e1 e2) = do IntVal i1 <- new eval0 e1
+														 IntVal i2 <- new evak0 e2
+												 in return $ IntVal (i1 + i2)
+eval1 (Abr n exp) = return $ FunVal n exp
+eval1 (App e1 e2) = do v1 <- eval0 e1
+														 v2 <- eval0 e2
+												 in case v1 of (FunVal e n x) -> eval0 x				
+\end{lstlisting}
+
 \end{document}
-
-
