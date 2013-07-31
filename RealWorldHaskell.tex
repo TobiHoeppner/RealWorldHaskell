@@ -1233,4 +1233,24 @@ eval1 (App e1 e2) = do v1 <- eval0 e1
 												 in case v1 of (FunVal e n x) -> eval0 x				
 \end{lstlisting}
 
+\subsection{Beispiel: der Zeilenparser}
+% siehe webseite für Beispielimplementierung
+\begin{lstlisting}
+import Control.Monad.Identity
+import Text.Parsec
+
+data Document = Document[String]
+
+parser :: ParsecT String() Identity Document
+parser = do
+	lines <- sepBy line (char '\n')
+	return $ Document lines
+
+lines :: ParsecT String() Identity String
+lines = many (noneOf '\n')
+
+parse :: String -> Document
+parse string = runParserT parser () "-" string
+\end{lstlisting}
+
 \end{document}
